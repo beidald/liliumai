@@ -1,5 +1,7 @@
 # Lilium AI
 
+[English](README.md) | [简体中文](README_CN.md)
+
 > **Not just a chatbot, but your AI Co-pilot for total computer automation.**
 > [liliumai.cn](https://liliumai.cn)
 

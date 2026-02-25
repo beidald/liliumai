@@ -1,5 +1,7 @@
 # Lilium AI
 
+[简体中文](README_CN.md) | [English](README.md)
+
 > **不仅仅是聊天机器人，更是您的 AI 自动驾驶员。**
 > 以打造“最强自动化、智能化操控电脑自己干活”为宗旨的 AI Agent 框架。
 
