@@ -1,0 +1,79 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build Output
+dist
+build
+bin
+
+# Environment & Config
+.env
+config.json
+config.*.json
+!config.example.json
+
+# Logs
+*.log
+logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Editor Config
+.vscode
+.idea
+*.swp
+*.swo
+
+# Project Data (Sensitive/Large)
+data/
+workspace/*
+!workspace/AGENTS.md
+!workspace/HEARTBEAT.md
+!workspace/SOUL.md
+!workspace/TOOLS.md
+!workspace/USER.md
+temp/
+*.sqlite
+
+# Skills (Selective)
+skills/ai/
+skills/user/
+skills/INDEX.md
+skills/SKILLS_LOG.md
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# Wechaty Session (Sensitive)
+*.memory-card.json
+
+# Model Files (Large)
+models/**/*.bin
+!models/**/.gitkeep
+
+# Backup Files
+*.zip
+*.tar.gz
+*.bak
+
+# Temporary Files
+test_output/
+coverage/
+
+# Website (Not part of core repo)
+website/
+
+# Documentation (Internal)
+docs/
+
+# Custom Scripts
+setup_photo_cron.sh
+take_latest_photo.py
+take_photo_and_send.sh

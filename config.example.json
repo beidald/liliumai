@@ -1,0 +1,128 @@
+{
+  "bot_name": "LiliumAI",
+  "workspace": "./workspace",
+  "admin": {
+    "email": "admin@example.com",
+    "password": "CHANGE_ME"
+  },
+  "llm": [
+    {
+      "provider": "ollama",
+      "model": "qwen3:0.6b",
+      "baseUrl": "http://localhost:11434/v1",
+      "priority": 2,
+      "maxTokens": 4096
+    },
+    {
+      "provider": "openai",
+      "model": "gpt-3.5-turbo",
+      "apiKey": "YOUR_OPENAI_API_KEY",
+      "baseUrl": "https://api.openai.com/v1",
+      "priority": 1,
+      "maxTokens": 4096
+    }
+  ],
+  "transcription": {
+    "provider": "local",
+    "model": "base",
+    "apiKey": ""
+  },
+  "tools": {
+    "restrictToWorkspace": true,
+    "braveApiKey": "",
+    "chromePath": "",
+    "execTimeout": 30000,
+    "memoryWindow": 10,
+    "compressContext": true,
+    "compressionThreshold": 0.5,
+    "maxSkills": 10,
+    "showThinkingInConsole": true,
+    "maxIterations": 20,
+    "autoSkillLevel": 0,
+    "tasks": {
+      "enabled": true,
+      "storage_file": "tasks.json"
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": false,
+      "token": "",
+      "allow_from": []
+    },
+    "whatsapp": {
+      "enabled": false,
+      "bridge_url": "ws://localhost:3001",
+      "bridge_token": "",
+      "allow_from": []
+    },
+    "discord": {
+      "enabled": false,
+      "token": "",
+      "allow_from": []
+    },
+    "feishu": {
+      "enabled": false,
+      "app_id": "",
+      "app_secret": "",
+      "encrypt_key": "",
+      "verification_token": "",
+      "allow_from": []
+    },
+    "dingtalk": {
+      "enabled": false,
+      "client_id": "",
+      "client_secret": "",
+      "allow_from": []
+    },
+    "mochat": {
+      "enabled": false,
+      "base_url": "https://mochat.io",
+      "socket_url": "",
+      "claw_token": "",
+      "sessions": [],
+      "panels": []
+    },
+    "email": {
+      "enabled": false,
+      "consent_granted": false,
+      "poll_interval_seconds": 60,
+      "smtp_host": "smtp.example.com",
+      "smtp_port": 587,
+      "smtp_user": "user@example.com",
+      "smtp_pass": "password",
+      "smtp_secure": false,
+      "imap_host": "imap.example.com",
+      "imap_port": 993,
+      "imap_user": "",
+      "imap_pass": "",
+      "imap_tls": true,
+      "allow_from": []
+    },
+    "wechat": {
+      "enabled": false,
+      "puppet": "wechaty-puppet-wechat",
+      "puppet_token": "",
+      "allow_from": []
+    },
+    "slack": {
+      "enabled": false,
+      "bot_token": "",
+      "app_token": "",
+      "allow_from": []
+    },
+    "qq": {
+      "enabled": false,
+      "app_id": "",
+      "token": "",
+      "secret": "",
+      "sandbox": false,
+      "allow_from": []
+    },
+    "web": {
+      "enabled": true,
+      "port": 3000,
+      "allow_remote": false
+    }
+  }
+}

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lilium AI - Console</title>
+    <script src="/assets/js/tailwindcss.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/assets/js/marked.min.js"></script>
+    <link rel="stylesheet" href="/assets/css/fontawesome.min.css">
+    <link rel="stylesheet" href="/assets/css/fonts.css">
+    <link rel="stylesheet" href="/assets/css/highlight-atom-one-dark.min.css">
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body class="bg-gray-50 h-screen flex overflow-hidden selection:bg-blue-100 selection:text-blue-900">
+    <!-- Login Modal -->
+    <div id="login-modal">
+        <div class="login-card relative">
+            <button onclick="hideLogin()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-slate-800" id="i18n-login-title">Admin Login</h2>
+                <p class="text-slate-500 text-sm mt-1" id="i18n-login-desc">Please enter your credentials</p>
+            </div>
+            <form id="login-form">
+                <div class="error-msg" id="login-error">Invalid email or password</div>
+                <input type="email" class="login-input" id="email" placeholder="Email" required value="admin@example.com">
+                <input type="password" class="login-input" id="password" placeholder="Password" required>
+                <button type="submit" class="login-btn" id="i18n-login-btn">Sign In</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="password-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4 opacity-0 transition-all duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm transform scale-95 transition-all duration-300 overflow-hidden">
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 text-2xl shadow-sm">
+                    <i class="fas fa-key"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800 mb-1" data-i18n="changePasswordTitle">Change Password</h3>
+                <p class="text-slate-500 text-sm mb-6" data-i18n="changePasswordDesc">Enter your current and new password</p>
+                
+                <form id="password-form" class="space-y-3">
+                    <div class="error-msg" id="password-error" style="display:none"></div>
+                    <input type="password" class="login-input" id="old-password" placeholder="Current Password" required>
+                    <input type="password" class="login-input" id="new-password" placeholder="New Password" required>
+                    <input type="password" class="login-input" id="confirm-password" placeholder="Confirm New Password" required>
+                    
+                    <div class="flex gap-3 mt-6">
+                        <button type="button" onclick="hideChangePassword()" class="flex-1 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all" data-i18n="cancel">Cancel</button>
+                        <button type="submit" class="flex-1 py-2.5 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200" data-i18n="save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div id="sidebar" class="w-64 bg-white border-r flex flex-col flex-shrink-0 transition-all duration-300">
+        <div class="h-16 px-4 border-b flex items-center justify-center">
+            <h1 class="text-xl font-extrabold text-blue-600 flex items-center gap-2">
+                <span class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm">
+                    <i class="fas fa-robot"></i>
+                </span>
+                Lilium AI
+            </h1>
+        </div>
+        
+        <div class="p-4">
+            <button onclick="createNewChat()" class="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center gap-2 transition-colors font-bold">
+                <i class="fas fa-plus"></i>
+                New Chat
+            </button>
+        </div>
+
+        <div id="session-list" class="flex-1 overflow-y-auto px-2 py-2 space-y-1">
+            <!-- Sessions will be loaded here -->
+        </div>
+
+        <div class="p-4 border-t space-y-2">
+            <!-- Language Switcher -->
+            <div class="flex bg-slate-100/50 p-1 rounded-xl border border-slate-200/60 mb-2">
+                <button onclick="setLanguage('zh')" id="lang-zh" class="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all">中文</button>
+                <button onclick="setLanguage('en')" id="lang-en" class="flex-1 py-1.5 text-xs font-bold rounded-lg transition-all">EN</button>
+            </div>
+            <div class="flex gap-2">
+                <button id="btn-tasks-toggle" onclick="toggleTasks()" class="flex-1 py-2 px-4 text-gray-600 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors" title="Tasks">
+                    <i class="fas fa-tasks text-lg"></i>
+                </button>
+                <button id="btn-settings-toggle" onclick="toggleConfig()" class="flex-1 py-2 px-4 text-gray-600 hover:bg-gray-100 rounded-lg flex items-center justify-center transition-colors" title="Settings">
+                    <i class="fas fa-sliders text-lg"></i>
+                </button>
+            </div>
+            <div class="text-[10px] text-gray-400 text-center px-2 uppercase tracking-widest font-bold">Lilium AI v1.0</div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col relative min-w-0 bg-slate-50">
+        <!-- Header -->
+        <header class="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-10 px-6 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <button id="sidebar-toggle" class="p-2 hover:bg-gray-100 rounded-lg text-gray-500 md:hidden">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <div class="flex flex-col justify-center">
+                    <h2 id="current-chat-title" class="text-base font-extrabold text-slate-800 truncate max-w-[200px] md:max-w-md leading-tight">New Chat</h2>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span id="status-dot" class="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span id="status-text" class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Disconnected</span>
+                    </div>
+                </div>
+            </div>
+            <div class="hidden md:block">
+                <!-- Logged In State: User Menu -->
+                <div class="relative group hidden" id="user-menu-container">
+                    <button id="user-menu-btn" class="flex items-center gap-2 hover:bg-slate-100 px-3 py-2 rounded-lg transition-colors">
+                        <div class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold" id="user-avatar">A</div>
+                        <span class="text-sm font-bold text-slate-700" id="user-name">Admin</span>
+                        <i class="fas fa-chevron-down text-xs text-slate-400"></i>
+                    </button>
+                    <!-- Dropdown -->
+                    <div class="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 hidden group-hover:block py-2 z-50 transform origin-top-right transition-all" style="margin-top: -1px;">
+                         <div class="px-4 py-3 border-b border-slate-50 mb-1">
+                            <p class="text-xs text-slate-400 font-medium uppercase tracking-wider">Signed in as</p>
+                            <p class="text-sm font-bold text-slate-800 truncate" id="user-role">admin</p>
+                         </div>
+                         <button onclick="showChangePassword()" class="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-blue-600 font-medium flex items-center gap-3 transition-colors">
+                            <i class="fas fa-key w-4 text-slate-400"></i> <span data-i18n="changePassword">Change Password</span>
+                         </button>
+                         <button onclick="logout()" class="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 font-medium flex items-center gap-3 transition-colors">
+                            <i class="fas fa-sign-out-alt w-4"></i> <span data-i18n="logout">Logout</span>
+                         </button>
+                    </div>
+                </div>
+
+                <!-- Logged Out State: Login Button -->
+                <button id="login-btn-header" onclick="showLogin()" class="hidden flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm font-bold text-sm">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span data-i18n="loginBtn">Sign In</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Messages area -->
+        <div id="messages" class="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth">
+            <!-- Initial welcome message -->
+            <div class="max-w-3xl mx-auto text-center py-12 space-y-6">
+                <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto text-3xl shadow-inner">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="text-3xl font-black text-slate-800" id="i18n-welcome-title">How can I help you?</h3>
+                    <p class="text-slate-500 max-w-sm mx-auto font-medium" id="i18n-welcome-desc">Start a conversation with Lilium AI, your intelligent AI assistant.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input area -->
+        <div class="p-6 bg-gradient-to-t from-slate-50 to-transparent">
+            <form id="chat-form" class="max-w-4xl mx-auto relative group">
+                <div class="absolute inset-0 bg-blue-500/5 blur-2xl group-focus-within:bg-blue-500/10 transition-all rounded-3xl"></div>
+                <div class="relative flex items-end gap-3 bg-white p-3 rounded-2xl shadow-lg border border-slate-200 focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-500/10 transition-all">
+                    <textarea id="message-input" 
+                        class="flex-1 px-4 py-3 bg-transparent border-none focus:ring-0 resize-none max-h-60 text-slate-700 placeholder:text-slate-400 text-base"
+                        rows="1"
+                        placeholder="Type your message..." disabled></textarea>
+                    <button type="submit" id="send-btn"
+                        class="bg-blue-600 text-white w-12 h-12 rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:grayscale transition-all shadow-lg shadow-blue-200 flex items-center justify-center" disabled>
+                        <i class="fas fa-paper-plane text-lg"></i>
+                    </button>
+                    <button type="button" id="stop-btn" onclick="stopGeneration()"
+                        class="bg-red-500 text-white w-12 h-12 rounded-xl hover:bg-red-600 transition-all shadow-lg shadow-red-200 flex items-center justify-center hidden">
+                        <i class="fas fa-stop text-lg"></i>
+                    </button>
+                </div>
+                <p class="text-[10px] text-slate-400 text-center mt-4 font-bold uppercase tracking-widest" id="i18n-disclaimer">Nanobot can make mistakes. Check important info.</p>
+            </form>
+        </div>
+
+    <!-- Tasks Modal -->
+    <div id="tasks-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[70] hidden flex items-center justify-center p-4 opacity-0 transition-all duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col transform scale-95 transition-all duration-300 overflow-hidden" id="tasks-modal-content">
+            <!-- Header -->
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white rounded-t-2xl relative z-10">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 text-xl shadow-sm">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-extrabold text-slate-800" id="i18n-tasks-title">Tasks</h2>
+                        <p class="text-slate-400 text-sm font-medium mt-0.5" id="i18n-tasks-subtitle">Manage and monitor your tasks</p>
+                    </div>
+                </div>
+                <button onclick="toggleTasks()" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <!-- Tabs -->
+            <div class="px-6 pt-4 pb-[2px] border-b border-slate-100 flex gap-6 overflow-x-auto relative z-10 bg-white" style="min-height: 3rem; z-index: 10000;">
+                <button onclick="switchTaskTab('all')" class="task-tab cursor-pointer active pb-3 text-sm font-bold text-blue-600 border-b-2 border-blue-600 transition-all whitespace-nowrap flex-shrink-0" data-tab="all" id="i18n-tab-all">All</button>
+                <button onclick="switchTaskTab('pending')" class="task-tab cursor-pointer pb-3 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-200 transition-all whitespace-nowrap flex-shrink-0" data-tab="pending" id="i18n-tab-pending">Pending</button>
+                <button onclick="switchTaskTab('in_progress')" class="task-tab cursor-pointer pb-3 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-200 transition-all whitespace-nowrap flex-shrink-0" data-tab="in_progress" id="i18n-tab-inprogress">In Progress</button>
+                <button onclick="switchTaskTab('paused')" class="task-tab cursor-pointer pb-3 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-200 transition-all whitespace-nowrap flex-shrink-0" data-tab="paused" id="i18n-tab-paused">Stopped</button>
+                <button onclick="switchTaskTab('completed')" class="task-tab cursor-pointer pb-3 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-200 transition-all whitespace-nowrap flex-shrink-0" data-tab="completed" id="i18n-tab-completed">Completed</button>
+                <button onclick="switchTaskTab('failed')" class="task-tab cursor-pointer pb-3 text-sm font-bold text-slate-500 hover:text-slate-700 border-b-2 border-transparent hover:border-slate-200 transition-all whitespace-nowrap flex-shrink-0" data-tab="failed" id="i18n-tab-failed">Failed</button>
+            </div>
+
+            <!-- Content -->
+            <div id="tasks-content" class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50 min-h-[400px]">
+                <!-- Task items will be loaded here -->
+                <div class="text-center text-slate-400 py-20 flex flex-col items-center">
+                    <i class="fas fa-circle-notch fa-spin text-3xl mb-4 text-blue-500"></i>
+                    <span class="text-sm font-bold uppercase tracking-widest" data-i18n="loadingTasks">Loading tasks...</span>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/50">
+                <button onclick="clearAllTasks()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm flex items-center gap-2">
+                    <i class="fas fa-trash-alt"></i>
+                    <span data-i18n="clearAllTasks">Clear All Tasks</span>
+                </button>
+                <button onclick="clearRunawayTasks()" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span data-i18n="clearRunaway">Clear Runaway Tasks</span>
+                </button>
+                <button onclick="document.getElementById('tasks-modal').classList.add('hidden')" class="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-50 transition-colors shadow-sm" data-i18n="close">Close</button>
+            </div>
+        </div>
+    </div>
+
+        <!-- Config Panel Overlay -->
+        <div id="config-overlay" class="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-[60] hidden" onclick="toggleConfig()"></div>
+
+        <!-- Config Panel -->
+        <aside id="config-panel" class="fixed right-0 top-0 bottom-0 w-[450px] glass-panel shadow-[-20px_0_50px_rgba(0,0,0,0.1)] z-[70] flex flex-col translate-x-full transition-transform duration-300 ease-in-out">
+            <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-white/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                        <i class="fas fa-sliders"></i>
+                    </div>
+                    <h2 class="text-xl font-extrabold text-slate-800" id="i18n-settings-title">Settings</h2>
+                </div>
+                <button onclick="toggleConfig()" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div id="config-content" class="flex-1 overflow-y-auto p-8 space-y-8">
+                <!-- Config items -->
+            </div>
+            <div class="p-8 border-t border-slate-100 bg-white/50 flex gap-3">
+                <button class="flex-1 bg-green-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-green-100 hover:bg-green-700 transition-all flex items-center justify-center gap-3" onclick="saveConfig()">
+                    <i class="fas fa-save"></i>
+                    <span id="i18n-save-btn">Save</span>
+                </button>
+                <button class="flex-1 bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all flex items-center justify-center gap-3" onclick="refreshConfig()">
+                    <i class="fas fa-sync-alt"></i>
+                    <span id="i18n-refresh-btn">Refresh</span>
+                </button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div id="qr-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center z-[100] p-4">
+        <div class="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-sm w-full text-center transform transition-all scale-100">
+            <div class="w-20 h-20 bg-green-50 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                <i class="fab fa-weixin text-4xl text-green-500"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 mb-3" id="i18n-scan-title">Scan to Login</h3>
+            <div id="qr-container" class="bg-slate-50 p-6 rounded-3xl mb-8 flex justify-center border border-slate-100 min-h-[240px] items-center shadow-inner">
+                <div class="animate-pulse flex flex-col items-center">
+                    <div class="bg-slate-200 w-52 h-52 rounded-2xl"></div>
+                </div>
+            </div>
+            <p id="qr-status" class="text-base text-slate-500 mb-10 leading-relaxed font-medium px-4" id="i18n-scan-status">Waiting for QR code...</p>
+            <button onclick="closeQRModal()" class="w-full bg-slate-100 text-slate-700 font-bold py-4 rounded-2xl hover:bg-slate-200 transition-all" id="i18n-close-btn">Close</button>
+        </div>
+    </div>
+
+    <!-- Source Code Modal -->
+    <div id="source-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm hidden z-[80] transition-opacity duration-300 opacity-0 flex items-center justify-center p-4">
+        <div id="source-modal-content" class="bg-white w-full max-w-4xl h-[80vh] rounded-2xl shadow-2xl flex flex-col transform transition-all duration-300 scale-95 overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-white z-10">
+                <div>
+                    <h2 class="text-xl font-black text-slate-800" data-i18n="sourceCode">Source Code</h2>
+                    <div id="source-file-path" class="text-xs text-slate-400 font-mono mt-1"></div>
+                </div>
+                <button onclick="closeSourceModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="flex-1 min-h-0 overflow-auto bg-[#282c34] p-0 relative">
+                 <div id="source-content" class="p-4 font-mono text-sm whitespace-pre overflow-x-auto min-h-full"></div>
+                 <button onclick="copySourceCode()" class="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white/70 hover:text-white p-2 rounded-lg backdrop-blur-md border border-white/10 transition-all z-20" title="Copy">
+                    <i class="fas fa-copy"></i>
+                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Media Preview Modal -->
+    <div id="media-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md hidden z-[90] transition-opacity duration-300 opacity-0 flex items-center justify-center p-4">
+        <div id="media-modal-content" class="relative max-w-7xl max-h-[90vh] flex flex-col items-center justify-center transition-all duration-300 scale-95 w-full h-full">
+            <button onclick="closeMediaModal()" class="absolute top-4 right-4 text-white/70 hover:text-white transition-colors z-50 bg-black/20 hover:bg-black/40 rounded-full p-2 w-10 h-10 flex items-center justify-center backdrop-blur-sm">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            
+            <div id="media-container" class="w-full h-full flex items-center justify-center overflow-hidden rounded-xl">
+                <!-- Content will be injected here -->
+            </div>
+            
+            <div id="media-caption" class="absolute bottom-4 left-0 right-0 text-center text-white/80 text-sm px-4 py-2 bg-black/40 backdrop-blur-sm rounded-lg mx-auto max-w-lg truncate hidden">
+                <!-- Caption/URL -->
+            </div>
+
+             <a id="media-open-btn" href="#" target="_blank" class="absolute top-4 left-4 text-white/70 hover:text-white transition-colors z-50 bg-black/20 hover:bg-black/40 rounded-full p-2 w-10 h-10 flex items-center justify-center backdrop-blur-sm" title="Open in New Tab">
+                <i class="fas fa-external-link-alt"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] hidden flex items-center justify-center p-4 opacity-0 transition-all duration-300">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm transform scale-95 transition-all duration-300 overflow-hidden" id="confirm-modal-content">
+            <div class="p-6 text-center">
+                <div class="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 text-2xl shadow-sm transition-colors duration-300" id="confirm-icon-bg">
+                    <i class="fas fa-question" id="confirm-icon"></i>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2" id="confirm-title">Confirm Action</h3>
+                <p class="text-slate-500 text-sm leading-relaxed" id="confirm-message">Are you sure you want to proceed?</p>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-3">
+                <button id="confirm-cancel-btn" class="flex-1 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+                    Cancel
+                </button>
+                <button id="confirm-ok-btn" class="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-bold rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+
+    <!-- WeChat Login Floating Button -->
+    <button id="wechat-login-btn" class="fixed bottom-6 right-6 w-14 h-14 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-300 hidden z-50 animate-pulse group" title="WeChat Login">
+        <i class="fab fa-weixin text-3xl transform group-hover:scale-110 transition-transform"></i>
+        <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white animate-bounce"></span>
+    </button>
+
+    <script src="/assets/js/highlight.min.js"></script>
+    <script type="module" src="/assets/js/app.js"></script>
+</body>
+</html>
